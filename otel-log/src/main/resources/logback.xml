@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+
+    <appender name="elastic-file" class="ch.qos.logback.core.FileAppender">
+        <file>logs/elastic.log</file>
+        <encoder class="co.elastic.logging.logback.EcsEncoder">
+            <serviceName>${OTEL_SERVICE_NAME}</serviceName>
+        </encoder>
+    </appender>
+
+    <appender name="otel-file" class="ch.qos.logback.core.FileAppender">
+        <file>logs/otel.log</file>
+        <encoder class="net.logstash.logback.encoder.LoggingEventCompositeJsonEncoder">
+            <providers>
+                <timestamp>
+                    <fieldName>Timestamp</fieldName>
+                    <pattern>[ISO_INSTANT]</pattern>
+                </timestamp>
+                <pattern>
+                    <omitEmptyFields>true</omitEmptyFields>
+                    <pattern>
+                        {
+                        "ServiceName": "%logger",
+                        "SeverityText": "%level",
+                        "Body": "%message",
+                        "TraceId": "%mdc{trace_id}",
+                        "SpanId": "%mdc{span_id}"
+                        }
+                    </pattern>
+                </pattern>
+            </providers>
+        </encoder>
+    </appender>
+
+    <appender name="otel-log"
+        class="io.opentelemetry.instrumentation.logback.mdc.v1_0.OpenTelemetryAppender">
+        <appender-ref ref="otel-file" />
+    </appender>
+
+    <appender name="elastic-log"
+        class="io.opentelemetry.instrumentation.logback.mdc.v1_0.OpenTelemetryAppender">
+        <appender-ref ref="elastic-file" />
+    </appender>
+
+    <appender name="otel-otlp"
+        class="io.opentelemetry.instrumentation.logback.appender.v1_0.OpenTelemetryAppender">
+        <captureExperimentalAttributes>true</captureExperimentalAttributes>
+        <captureKeyValuePairAttributes>true</captureKeyValuePairAttributes>
+    </appender>
+
+    <root level="INFO">
+        <appender-ref ref="otel-log" />
+        <appender-ref ref="elastic-log" />
+        <appender-ref ref="otel-otlp" />
+    </root>
+</configuration>

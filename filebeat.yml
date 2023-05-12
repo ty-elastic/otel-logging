@@ -1,0 +1,24 @@
+filebeat.inputs:
+- type: filestream 
+  paths: /logs/elastic.log
+  parsers:
+    - ndjson:
+      overwrite_keys: true 
+      add_error_key: true 
+      expand_keys: true 
+
+processors:
+  - rename:
+      fields:
+        - from: "trace_id"
+          to: "trace.id"
+        - from: "span_id"
+          to: "span.id"
+      ignore_missing: false
+      fail_on_error: true
+  - drop_fields:
+      fields:
+        - "trace_flags"
+      ignore_missing: false
+cloud.id: "${ELASTIC_CLOUD_ID:?required}"
+cloud.auth: "${ELASTIC_CLOUD_AUTH:?required}"
