@@ -2,42 +2,15 @@ receivers:
   otlp:
     protocols:
       grpc:
-  filelog:
-    include: [ logs/otel.log ]
-    operators:
-      - type: json_parser
-        timestamp:
-          parse_from: attributes.Timestamp
-          layout_type: strptime
-          location: UTC
-          layout: '%Y-%m-%dT%H:%M:%S.%fZ'
-        severity:
-          parse_from: attributes.SeverityText
-        body: attributes.Body
-        trace:
-          trace_id:
-            parse_from: attributes.TraceId
-          span_id:
-            parse_from: attributes.SpanId
-        scope_name:
-          parse_from: attributes.ServiceName
-      - type: copy
-        from: attributes.ServiceName
-        to: resource["service.name"]
-      - type: remove
-        field: attributes.Timestamp
-      - type: remove
-        field: attributes.Body
-      - type: remove
-        field: attributes.SeverityText
-      - type: remove
-        field: attributes.ServiceName
-      - type: remove
-        field: attributes.TraceId
-      - type: remove
-        field: attributes.SpanId
+
 processors:
   batch:
+  filter/logs:
+    logs:
+      exclude:
+        match_type: regexp
+        bodies:
+        - .*
 
 exporters:
   logging:
@@ -60,7 +33,7 @@ service:
       receivers: [ otlp ]
       processors: [ batch ]
       exporters: [ logging, otlphttp/elastic]
-    # logs:
-    #   receivers: [ otlp ]
-    #   processors: [ batch ]
-    #   exporters: [ logging, otlphttp/elastic]
+    logs:
+      receivers: [ otlp ]
+      processors: [ filter/logs ]
+      exporters: [ logging ]

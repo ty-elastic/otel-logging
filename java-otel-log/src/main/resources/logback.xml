@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration debug="true">
+
+    <!-- log file for elastic filebeat/agent ingest -->
+    <appender name="elastic-file" class="ch.qos.logback.core.FileAppender">
+        <file>logs/elastic.log</file>
+        <encoder class="co.elastic.logging.logback.EcsEncoder">
+            <serviceName>${OTEL_SERVICE_NAME}</serviceName>
+            <includeOrigin>true</includeOrigin>
+        </encoder>
+    </appender>
+
+    <appender name="elastic-log-kv"
+        class="com.tb93.otel.batteries.OtelPolyfillAppender">
+        <appender-ref ref="elastic-file" />
+        <addKeyValuePairsAsMDC>true</addKeyValuePairsAsMDC>
+    </appender>
+
+    <appender name="elastic-log"
+        class="io.opentelemetry.instrumentation.logback.mdc.v1_0.OpenTelemetryAppender">
+        <appender-ref ref="elastic-log-kv" />
+        <addBaggage>true</addBaggage>
+    </appender>
+
+    <!-- log file for otel collection ingest -->
+    <appender name="otel-file" class="ch.qos.logback.core.FileAppender">
+        <file>logs/otel.log</file>
+        <encoder class="net.logstash.logback.encoder.LogstashEncoder">
+            <includeCallerData>true</includeCallerData>
+            <customFields>{"service.name":"${OTEL_SERVICE_NAME}"}</customFields>
+            <fieldNames>
+                <callerClass>code.namespace</callerClass>
+                <callerMethod>code.function</callerMethod>
+                <callerFile>code.filepath</callerFile>
+                <callerLine>code.lineno</callerLine>
+                <stackTrace>exception.stacktrace</stackTrace>
+            </fieldNames>
+        </encoder>
+    </appender>
+
+    <appender name="otel-log-kv"
+        class="com.tb93.otel.batteries.OtelPolyfillAppender">
+        <appender-ref ref="otel-file" />
+        <addKeyValuePairsAsStructured>true</addKeyValuePairsAsStructured>
+    </appender>
+
+    <appender name="otel-log"
+        class="io.opentelemetry.instrumentation.logback.mdc.v1_0.OpenTelemetryAppender">
+        <appender-ref ref="otel-log-kv" />
+        <addBaggage>true</addBaggage>
+    </appender>
+
+    <!-- native otlp -->
+    <appender name="otel-otlp"
+        class="io.opentelemetry.instrumentation.logback.appender.v1_0.OpenTelemetryAppender">
+        <captureExperimentalAttributes>false</captureExperimentalAttributes>
+        <captureCodeAttributes>true</captureCodeAttributes>
+        <captureKeyValuePairAttributes>true</captureKeyValuePairAttributes>
+        <captureMdcAttributes>*</captureMdcAttributes>
+    </appender>
+
+    <root level="INFO">
+        <appender-ref ref="otel-log" />
+        <appender-ref ref="elastic-log" />
+        <appender-ref ref="otel-otlp" />
+    </root>
+</configuration>

@@ -3,41 +3,88 @@ receivers:
     protocols:
       grpc:
   filelog:
+    # ingest app log (proprietary format)
     include: [ logs/otel.log ]
     operators:
+      # parse JSON logs from app
       - type: json_parser
+        # conform timestamp
         timestamp:
-          parse_from: attributes.Timestamp
+          parse_from: attributes["@timestamp"]
           layout_type: strptime
           location: UTC
           layout: '%Y-%m-%dT%H:%M:%S.%fZ'
+        # conform severity
         severity:
-          parse_from: attributes.SeverityText
-        body: attributes.Body
+          parse_from: attributes.level
+        # conform body
+        body: attributes.message
+        # conform trace meta
         trace:
           trace_id:
-            parse_from: attributes.TraceId
+            parse_from: attributes.trace_id
           span_id:
-            parse_from: attributes.SpanId
+            parse_from: attributes.span_id
+        # conform scope
         scope_name:
-          parse_from: attributes.ServiceName
-      - type: copy
-        from: attributes.ServiceName
+          parse_from: attributes["code.namespace"]
+
+      # clean up raw attributes parsed above
+      - type: remove
+        field: attributes["@timestamp"]
+      - type: remove
+        field: attributes.level
+      - type: remove
+        field: attributes.message
+      - type: remove
+        field: attributes.trace_id
+        if: attributes.trace_id != nil
+      - type: remove
+        field: attributes.span_id
+        if: attributes.span_id != nil
+
+      # service.name attribute needs to be on the resource
+      - type: move
+        from: attributes["service.name"]
         to: resource["service.name"]
+
+      # parse stack trace to extract exception message
+      - type: regex_parser
+        parse_from: attributes["exception.stacktrace"]
+        regex: '^\S*:\s(?P<exception_message>.*)\n.*'
+        if: attributes["exception.stacktrace"] != nil
+      - type: move
+        from: attributes.exception_message
+        to: attributes["exception.message"]
+        if: attributes["exception_message"] != nil
+
+      # remove (currently) unused fields
       - type: remove
-        field: attributes.Timestamp
+        field: attributes.level_value
       - type: remove
-        field: attributes.Body
+        field: attributes["@version"]
       - type: remove
-        field: attributes.SeverityText
+        field: attributes["thread_name"]
+        if: attributes.thread_name != nil
       - type: remove
-        field: attributes.ServiceName
-      - type: remove
-        field: attributes.TraceId
-      - type: remove
-        field: attributes.SpanId
+        field: attributes.trace_flags
+        if: attributes.trace_flags != nil
+
 processors:
   batch:
+  # remove "logback.mdc" prefix from baggage attributes
+  transform/log:
+    error_mode: ignore
+    log_statements:
+      - context: log
+        statements:
+          - replace_all_patterns(attributes, "key", "logback\\.mdc\\.baggage\\.", "baggage.")
+  filter/logs:
+    logs:
+      exclude:
+        match_type: regexp
+        bodies:
+        - .*
 
 exporters:
   logging:
@@ -60,7 +107,11 @@ service:
       receivers: [ otlp ]
       processors: [ batch ]
       exporters: [ logging, otlphttp/elastic]
-    logs:
+    logs/file:
       receivers: [ filelog ]
-      processors: [ batch ]
+      processors: [ transform/log, batch ]
       exporters: [ logging, otlphttp/elastic]
+    logs/otlp:
+      receivers: [ otlp ]
+      processors: [ filter/logs ]
+      exporters: [ logging ]

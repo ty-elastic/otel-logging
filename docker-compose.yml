@@ -1,7 +1,7 @@
 version: '3'
 services:
-  otel-log:
-    build: otel-log/
+  java-otel-log:
+    build: java-otel-log/
     volumes:
       - ./logs:/logs
     environment:

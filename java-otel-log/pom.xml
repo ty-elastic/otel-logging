@@ -39,13 +39,7 @@
     <dependency>
       <groupId>net.logstash.logback</groupId>
       <artifactId>logstash-logback-encoder</artifactId>
-      <version>7.3</version>
-      <!-- Use runtime scope if the project does not have any compile-time usage of
-      logstash-logback-encoder,
-         such as usage of StructuredArguments/Markers or implementations such as
-         JsonProvider, AppenderListener, JsonFactoryDecorator, JsonGeneratorDecorator, etc
-    <scope>runtime</scope>
-    -->
+      <version>7.2</version>
     </dependency>
     <dependency>
       <groupId>junit</groupId>
@@ -71,16 +65,7 @@
     </dependency>
     <dependency>
       <groupId>io.opentelemetry</groupId>
-      <artifactId>opentelemetry-sdk-extension-autoconfigure</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>io.opentelemetry</groupId>
       <artifactId>opentelemetry-exporter-otlp-logs</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>io.opentelemetry.instrumentation</groupId>
-      <artifactId>opentelemetry-logback-mdc-1.0</artifactId>
-      <version>1.25.1-alpha</version>
     </dependency>
     <dependency>
       <groupId>io.opentelemetry.instrumentation</groupId>
@@ -88,32 +73,35 @@
       <version>1.25.1-alpha</version>
     </dependency>
     <dependency>
+      <groupId>io.opentelemetry.instrumentation</groupId>
+      <artifactId>opentelemetry-logback-mdc-1.0</artifactId>
+      <version>1.25.1-alpha</version>
+    </dependency>
+
+    <dependency>
       <groupId>ch.qos.logback</groupId>
       <artifactId>logback-core</artifactId>
-      <version>1.4.5</version>
+      <version>1.4.7</version>
     </dependency>
     <dependency>
       <groupId>ch.qos.logback</groupId>
       <artifactId>logback-classic</artifactId>
-      <version>1.4.5</version>
+      <version>1.4.7</version>
     </dependency>
     <dependency>
       <groupId>org.slf4j</groupId>
       <artifactId>slf4j-api</artifactId>
-      <version>2.0.6</version>
+      <version>2.0.7</version>
     </dependency>
     <dependency>
-    <groupId>co.elastic.logging</groupId>
-    <artifactId>logback-ecs-encoder</artifactId>
-    <version>1.5.0</version>
-</dependency>
+      <groupId>co.elastic.logging</groupId>
+      <artifactId>logback-ecs-encoder</artifactId>
+      <version>1.5.0</version>
+    </dependency>
   </dependencies>
 
-
   <build>
-
     <plugins>
-
       <plugin>
         <artifactId>maven-assembly-plugin</artifactId>
         <version>3.5.0</version>
@@ -137,8 +125,6 @@
           </execution>
         </executions>
       </plugin>
-
     </plugins>
-
   </build>
 </project>

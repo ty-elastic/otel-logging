@@ -4,8 +4,8 @@ COPY pom.xml /usr/src/app
 WORKDIR /usr/src/app
 RUN mvn package
 
-FROM eclipse-temurin:17-jre
+FROM eclipse-temurin:17
 
 COPY --from=build /usr/src/app/target/otel-log-1.0-SNAPSHOT-jar-with-dependencies.jar /otel-log.jar
 
-ENTRYPOINT ["java", "-jar","/otel-log.jar"]
+ENTRYPOINT ["java", "-jar", "/otel-log.jar"]
