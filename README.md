@@ -117,7 +117,6 @@ Although not explicitly pictured, an [OpenTelemetry Collector](https://opentelem
 - no additional collectors/agents required
 - conversion to ECS happens within Elastic keeping log data vendor-agnostic until ingestion
 - common wireline protocol (OTLP) across tracing, metrics, and logs
-- with optional Collector, logs can be routed to multiple observability backends
 
 ### Cons
 - not available (yet) in many OTel-supported languages
@@ -137,7 +136,7 @@ Given the cons of Model 1, it may be advantageous to consider a model which cont
 
 In this model, your service generates log statements as it always has, using popular logging libraries (e.g., [Logback](https://logback.qos.ch) for Java). OTel provides a MDC Appender for Logback ([Logback MDC](https://github.com/open-telemetry/opentelemetry-java-instrumentation/tree/main/instrumentation/logback/logback-mdc-1.0/library)), which adds SpanID, TraceID, and Baggage to the [Logback MDC context](https://logback.qos.ch/manual/mdc.html).
 
-Notably, no log record structure is assumed by the OTel filelogreceiver. In the example provided, we employ the [logstash-logback-encoder](https://github.com/logfellow/logstash-logback-encoder) to JSON-encode log messages. The logstash-logback-encoder will read the OTel SpanID, TraceID, and Baggage off the MDC context and encode it into the JSON structure. Notably, logstash-logback-encoder doesn't explicitly support [slf4j key-value arguments](https://www.slf4j.org/manual.html#fluent). It does, however, support [Logback structured arguments](https://github.com/logfellow/logstash-logback-encoder#event-specific-custom-fields), and thus I use the [Polyfill Appender](https://github.com/ty-elastic/otel-logging/blob/main/java-otel-log/src/main/java/com/tb93/otel/batteries/PolyfillAppender.java) to convert slf4j key-value arguments to Logback structured arguments.
+Notably, no log record structure is assumed by the OTel filelogreceiver. In the example provided, we employ the [logstash-logback-encoder](https://github.com/logfellow/logstash-logback-encoder) to JSON-encode log messages. The logstash-logback-encoder will read the OTel SpanID, TraceID, and Baggage off the MDC context and encode it into the JSON structure. Notably, logstash-logback-encoder doesn't explicitly support [slf4j key-value pairs](https://www.slf4j.org/manual.html#fluent). It does, however, support [Logback structured arguments](https://github.com/logfellow/logstash-logback-encoder#event-specific-custom-fields), and thus I use the [Polyfill Appender](https://github.com/ty-elastic/otel-logging/blob/main/java-otel-log/src/main/java/com/tb93/otel/batteries/PolyfillAppender.java) to convert slf4j key-value pairs to Logback structured arguments.
 
 From there, we write the log lines to a log file. If you are using Kubernetes or other container orchestration in your environment, you would more typically write to stdout (console) and let the orchestration log driver write to and manage log files.
 
@@ -184,12 +183,11 @@ flowchart TB
 - less susceptible to "glare" conditions when service prematurely exits
 - conversion to ECS happens within Elastic keeping log data vendor-agnostic until ingestion
 - common wireline protocol (OTLP) across tracing, metrics, and logs
-- with optional Collector, logs can be routed to multiple observability backends
 
 ### Cons
 - all the headaches of file-based logging (rotation, disk overflow)
-- not widely proven in the field
-- no support for slf4j key-value arguments
+- beta quality and not yet proven in the field
+- no support for slf4j key-value pairs
 
 ### Demo
 
@@ -201,7 +199,7 @@ Although the second model described affords some resilience as a function of the
 
 In this model, your service generates log statements as it always has, using popular logging libraries (e.g., [Logback](https://logback.qos.ch) for Java). As with model 2, we employ OTel's [Logback MDC](https://github.com/open-telemetry/opentelemetry-java-instrumentation/tree/main/instrumentation/logback/logback-mdc-1.0/library) to add SpanID, TraceID, and Baggage to the [Logback MDC context](https://logback.qos.ch/manual/mdc.html).
 
-From there, we employ the [Elastic ECS Encoder](https://www.elastic.co/guide/en/ecs-logging/java/current/setup.html) to encode log statements complaint to the Elastic Common Schema. The Elastic ECS Encoder will read the OTel SpanID, TraceID, and Baggage off the MDC context and encode it into the JSON structure. Similar to model 2, the Elastic ECS Encoder doesn't support sl4f key-vair arguments. Curiously, the Elastic ECS encoder also doesn't appear to support Logback structured arguments. Thus, within the Polyfill Appender, I add slf4j key-value arguments as MDC context. This is less than ideal, however, since MDC forces all values to be strings.
+From there, we employ the [Elastic ECS Encoder](https://www.elastic.co/guide/en/ecs-logging/java/current/setup.html) to encode log statements complaint to the Elastic Common Schema. The Elastic ECS Encoder will read the OTel SpanID, TraceID, and Baggage off the MDC context and encode it into the JSON structure. Similar to model 2, the Elastic ECS Encoder doesn't support sl4f key-vair arguments. Curiously, the Elastic ECS encoder also doesn't appear to support Logback structured arguments. Thus, within the Polyfill Appender, I add slf4j key-value pairs as MDC context. This is less than ideal, however, since MDC forces all values to be strings.
 
 From there, we write the log lines to a log file. If you are using Kubernetes or other container orchestration in your environment, you would more typically write to stdout (console) and let the orchestration log driver write to and manage log files. 
 
@@ -241,11 +239,11 @@ flowchart TB
 - inherent file-based FIFO buffer
 - less susceptible to "glare" conditions when service prematurely exits
 - native ECS format for easy manipulation in Elastic
-- fleet-managed collection via Elastic Agent
+- fleet-managed via Elastic Agent
 
 ### Cons
 - all the headaches of file-based logging (rotation, disk overflow)
-- no support for slf4j key-value arguments or Logback structured arguments
+- no support for slf4j key-value pairs or Logback structured arguments
 - requires translation of OTel SpanID and TraceID in Filebeat config
 - disparate data paths for logs vs. tracing and metrics
 - vendor-specific logging format
@@ -260,7 +258,7 @@ For most customers, I currently recommend [Model 3](#model-3-logging-via-elastic
 
 Further, you can leverage this same Elastic Agent instance (ideally running in your [Kubernetes daemonset](https://www.elastic.co/guide/en/fleet/current/running-on-kubernetes-managed-by-fleet.html)) to collect rich and robust metrics and logs from [Kubernetes](https://docs.elastic.co/en/integrations/kubernetes) and many other supported services via [Elastic Integrations](https://www.elastic.co/integrations/data-integrations). Finally, Elastic Agent facilitates remote management via [Fleet](https://www.elastic.co/guide/en/fleet/current/fleet-overview.html), avoiding bespoke configuration files.
 
-Alternatively, for customers who either wish to keep their nodes vendor-neutral or use a consolidated signal routing system, I recommend [Model 2](#model-2-logging-via-the-opentelemetry-collector), wherein an OpenTelemetry collector is used to scrape service log files. While workable and practiced in the field today, this model inherently carries some risk given the current beta nature of the OpenTelemetry filelogreceiver.
+Alternatively, for customers who either wish to keep their nodes vendor-neutral or use a consolidated signal routing system, I recommend [Model 2](#model-2-logging-via-the-opentelemetry-collector), wherein an OpenTelemetry collector is used to scrape service log files. While workable and practiced by some early adopters in the field today, this model inherently carries some risk given the current beta nature of the OpenTelemetry filelogreceiver.
 
 I generally do not recommend [Model 1](#model-1-logging-via-opentelemetry-instrumentation) given its limited language support, experimental/alpha status (the API could change), and current potential for data loss. That said, in time, with more language support, and more thought to resilient designs, it has obviously advantages both with regard to simplicity and richness of metadata.
 
