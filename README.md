@@ -60,8 +60,8 @@ The demos assume you have a working [docker](https://www.docker.com/) environmen
 OTEL_SERVICE_NAME=app4
 
 # Filebeat vars
-ELASTIC_CLOUD_ID=(see https://www.elastic.co/guide/en/beats/metricbeat/8.7/configure-cloud-id.html)
-ELASTIC_CLOUD_AUTH=(see https://www.elastic.co/guide/en/beats/metricbeat/8.7/configure-cloud-id.html)
+ELASTIC_CLOUD_ID=(see https://www.elastic.co/guide/en/beats/metricbeat/current/configure-cloud-id.html)
+ELASTIC_CLOUD_AUTH=(see https://www.elastic.co/guide/en/beats/metricbeat/current/configure-cloud-id.html)
 
 # apm vars
 ELASTIC_APM_SERVER_ENDPOINT=(address of your Elastic Cloud APM server... i.e., https://xyz123.apm.us-central1.gcp.cloud.es.io:443)
