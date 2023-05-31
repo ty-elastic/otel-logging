@@ -49,16 +49,20 @@ public class App {
                         // Initialize OpenTelemetry as early as possible
                         initializeOpenTelemetry();
 
+                        // loop around outputting various log signal variations
                         while (true) {
                                 try {
+                                        // sleep a bit on each loop
                                         Thread.sleep(10 * 1000);
 
+                                        // create some baggage with a session_id context
                                         Baggage.current().toBuilder()
                                                         .put("session_id", Long
                                                                         .toString(RandomGenerator.getDefault()
                                                                                         .nextLong()))
                                                         .build().makeCurrent();
 
+                                        // create some attributes for spans and span events
                                         Attributes attributes = Attributes.of(AttributeKey.stringKey("user_id"),
                                                         Long.toString(RandomGenerator.getDefault().nextLong()));
 
@@ -89,11 +93,14 @@ public class App {
 
         private static void initializeOpenTelemetry() {
 
+                // set service name on all OTel signals
                 Resource resource = Resource.getDefault().merge(Resource.create(
                                 Attributes.of(ResourceAttributes.SERVICE_NAME, SERVICE_NAME)));
 
+                // init OTel trace provider with export to OTLP
                 SdkTracerProvider sdkTracerProvider = SdkTracerProvider.builder()
                                 .setResource(resource).setSampler(Sampler.alwaysOn())
+                                // add span processor to add baggage as span attributes
                                 .addSpanProcessor(new AddBaggageSpanProcessor())
                                 .addSpanProcessor(BatchSpanProcessor.builder(OtlpGrpcSpanExporter
                                                 .builder()
@@ -102,8 +109,10 @@ public class App {
                                                 .build()).build())
                                 .build();
 
+                // init OTel logger provider with export to OTLP
                 SdkLoggerProvider sdkLoggerProvider = SdkLoggerProvider.builder()
                                 .setResource(resource)
+                                // add log record processor to add baggage as log attributes
                                 .addLogRecordProcessor(new AddBaggageLogProcessor())
                                 .addLogRecordProcessor(BatchLogRecordProcessor.builder(
                                                 OtlpGrpcLogRecordExporter.builder().setEndpoint(
@@ -112,6 +121,7 @@ public class App {
                                                 .build())
                                 .build();
 
+                // init OTel meter provider with export to OTLP
                 SdkMeterProvider sdkMeterProvider = SdkMeterProvider.builder().setResource(resource)
                                 .registerMetricReader(PeriodicMetricReader.builder(
                                                 OtlpGrpcMetricExporter.builder().setEndpoint(System
@@ -120,6 +130,7 @@ public class App {
                                                 .build())
                                 .build();
 
+                // create sdk object and set it as global
                 OpenTelemetrySdk sdk = OpenTelemetrySdk.builder()
                                 .setTracerProvider(sdkTracerProvider)
                                 .setLoggerProvider(sdkLoggerProvider)
@@ -128,21 +139,24 @@ public class App {
                                                 .create(W3CTraceContextPropagator.getInstance()))
                                 .build();
                 GlobalOpenTelemetry.set(sdk);
+                // connect logger
                 GlobalLoggerProvider.set(sdk.getSdkLoggerProvider());
+                // Add hook to close SDK, which flushes logs
+                Runtime.getRuntime().addShutdownHook(new Thread(sdk::close));
 
-                // Gets or creates a named meter instance
+                // Get or creates a named meter instance
                 Meter meter = sdk.meterBuilder(SERVICE_NAME).build();
-
                 // Build counter e.g. LongCounter
                 requestCount = meter.counterBuilder("request_count").setDescription("Requests")
                                 .setUnit("1").build();
-
-                // Add hook to close SDK, which flushes logs
-                Runtime.getRuntime().addShutdownHook(new Thread(sdk::close));
         }
 
         static LongCounter requestCount;
 
+        // copy baggage to attributes for metrics
+        // be careful: you can quickly explode the cardinality of metrics when you attach dynamic attributes
+        // at the reporting interval for a counter, you will get N copies of the counter, where each copy has
+        // the same value, but different attributes.
         public static Attributes makeAttributesFromBaggage(Context context) {
                 Baggage baggage = Baggage.fromContext(context);
                 AttributesBuilder attributesBuilder = Attributes.builder();
@@ -159,6 +173,7 @@ public class App {
                 Span span = null;
                 Scope scope = null;
                 if (withSpan) {
+                        // create a span
                         span = GlobalOpenTelemetry.getTracer(SERVICE_NAME).spanBuilder("func").startSpan();
                         if (spanAttribute != null)
                                 span.setAllAttributes(spanAttribute);
@@ -173,11 +188,14 @@ public class App {
                         log = slf4jLogger.atInfo();
                 log = log.setMessage(message);
                 if (withKeyValue) {
+                        // add structured data
                         log = log.addKeyValue("someKey", Long.valueOf(93));
                 }
+                // log it (this records origin)
                 log.log();
 
-                requestCount.add(1, makeAttributesFromBaggage(Context.current()));
+                // do not add dynamic attributes to avoid cardinality explosion
+                requestCount.add(1/*, makeAttributesFromBaggage(Context.current())*/);
 
                 if (withSpan) {
                         try {

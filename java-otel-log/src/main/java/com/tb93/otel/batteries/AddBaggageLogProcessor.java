@@ -10,7 +10,7 @@ public class AddBaggageLogProcessor implements LogRecordProcessor {
 
     @Override
     public void onEmit(Context context, ReadWriteLogRecord logRecord) {
-        // add baggage to span attributes
+        // add baggage to log attributes
         Baggage baggage = Baggage.fromContext(context);
         baggage.forEach(
                 (key, value) -> logRecord.setAttribute(
