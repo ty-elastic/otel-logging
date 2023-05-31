@@ -120,7 +120,7 @@ Although not explicitly pictured, an [OpenTelemetry Collector](https://opentelem
 - with optional Collector, logs can be routed to multiple observability backends
 
 ### Cons
-- not available (yet) in most OTel-supported languages
+- not available (yet) in many OTel-supported languages
 - no intermediate log file for ad-hoc, on-node debugging
 - immature (alpha/experimental)
 - unknown "glare" conditions which could result in loss of log data if service exits prematurely or if the backend is unable to accept log data for an extended period of time
