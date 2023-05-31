@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration debug="true">
+
+    <!-- #### Model 1: Logging via OpenTelemetry Instrumentation #### -->
+
+    <appender name="otel-otlp"
+        class="io.opentelemetry.instrumentation.logback.appender.v1_0.OpenTelemetryAppender">
+        <captureExperimentalAttributes>false</captureExperimentalAttributes>
+        <!-- include src origin info -->
+        <captureCodeAttributes>true</captureCodeAttributes>
+        <!-- include slf4j key/value arguments -->
+        <captureKeyValuePairAttributes>true</captureKeyValuePairAttributes>
+    </appender>
+
+    <!-- #### Model 2: Logging via the OpenTelemetry Collector #### -->
+
+    <!-- log file for otel collector ingest -->
+    <appender name="otel-file" class="ch.qos.logback.core.FileAppender">
+        <file>logs/otel.log</file>
+        <encoder class="net.logstash.logback.encoder.LogstashEncoder">
+            <includeCallerData>true</includeCallerData>
+            <!-- set serviceName from env var -->
+            <customFields>{"service.name":"${OTEL_SERVICE_NAME}"}</customFields>
+            <!-- rename some fields per OTel log semantics -->
+            <fieldNames>
+                <callerClass>code.namespace</callerClass>
+                <callerMethod>code.function</callerMethod>
+                <callerFile>code.filepath</callerFile>
+                <callerLine>code.lineno</callerLine>
+                <stackTrace>exception.stacktrace</stackTrace>
+            </fieldNames>
+        </encoder>
+    </appender>
+
+    <!-- add key/value pairs as logback structured arguments -->
+    <appender name="otel-log-kv"
+        class="com.tb93.otel.batteries.PolyfillAppender">
+        <appender-ref ref="otel-file" />
+        <addKeyValuePairsAsStructured>true</addKeyValuePairsAsStructured>
+    </appender>
+
+    <!-- add traceid, spanid, and baggage as MDC context -->
+    <appender name="otel-log"
+        class="io.opentelemetry.instrumentation.logback.mdc.v1_0.OpenTelemetryAppender">
+        <appender-ref ref="otel-log-kv" />
+        <!-- add baggage as MDC context -->
+        <addBaggage>true</addBaggage>
+    </appender>
+
+    <!-- #### Model 3: Logging via Elastic Agent (or Filebeat) #### -->
+
+    <!-- log file for elastic filebeat/agent ingest -->
+    <appender name="elastic-file" class="ch.qos.logback.core.FileAppender">
+        <file>logs/elastic.log</file>
+        <encoder class="co.elastic.logging.logback.EcsEncoder">
+            <!-- set serviceName from env var -->
+            <serviceName>${OTEL_SERVICE_NAME}</serviceName>
+            <!-- include src origin info -->
+            <includeOrigin>true</includeOrigin>
+        </encoder>
+    </appender>
+
+    <!-- set slf4j key-value pairs as MDC context -->
+    <appender name="elastic-log-kv"
+        class="com.tb93.otel.batteries.PolyfillAppender">
+        <appender-ref ref="elastic-file" />
+        <addKeyValuePairsAsMDC>true</addKeyValuePairsAsMDC>
+    </appender>
+
+    <!-- add traceid, spanid, and baggage as MDC context -->
+    <appender name="elastic-log"
+        class="io.opentelemetry.instrumentation.logback.mdc.v1_0.OpenTelemetryAppender">
+        <appender-ref ref="elastic-log-kv" />
+        <!-- add baggage as MDC context -->
+        <addBaggage>true</addBaggage>
+    </appender>
+
+    <!-- #### send logs to all 3 loggers #### -->
+    <root level="INFO">
+        <appender-ref ref="otel-log" />
+        <appender-ref ref="elastic-log" />
+        <appender-ref ref="otel-otlp" />
+    </root>
+</configuration>

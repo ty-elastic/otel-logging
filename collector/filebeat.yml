@@ -1,0 +1,39 @@
+receivers:
+  otlp:
+    protocols:
+      grpc:
+
+processors:
+  batch:
+  # drop otlp logs in this mode
+  filter/otlplog:
+    logs:
+      exclude:
+        match_type: regexp
+        bodies:
+        - .*
+
+exporters:
+  logging:
+    verbosity: detailed
+  otlphttp/elastic: 
+    endpoint: "${ELASTIC_APM_SERVER_ENDPOINT}"
+    headers:
+      # Elastic APM Server secret token
+      Authorization: "Bearer ${ELASTIC_APM_SERVER_SECRET}"  
+
+service:
+  pipelines:
+    traces:
+      receivers: [ otlp ]
+      processors: [ batch ]
+      exporters: [ logging, otlphttp/elastic]
+    metrics:
+      receivers: [ otlp ]
+      processors: [ batch ]
+      exporters: [ logging, otlphttp/elastic]
+    # drop otlp logs in this mode
+    logs/otlp:
+      receivers: [ otlp ]
+      processors: [ filter/otlplog ]
+      exporters: [ logging ]

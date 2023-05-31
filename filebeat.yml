@@ -1,0 +1,27 @@
+filebeat.inputs:
+# ingest app log (already in ECS format)
+- type: filestream 
+  paths: /logs/elastic.log
+  parsers:
+    - ndjson:
+      overwrite_keys: true 
+      add_error_key: true 
+      expand_keys: true 
+
+processors:
+  # comform trace and span metadata
+  - rename:
+      fields:
+        - from: "trace_id"
+          to: "trace.id"
+        - from: "span_id"
+          to: "span.id"
+      ignore_missing: true
+  # drop unused fields
+  - drop_fields:
+      fields:
+        - "trace_flags"
+      ignore_missing: true
+
+cloud.id: "${ELASTIC_CLOUD_ID:?required}"
+cloud.auth: "${ELASTIC_CLOUD_AUTH:?required}"

@@ -1,0 +1,32 @@
+version: '3'
+services:
+  java-otel-log:
+    build: java-otel-log/
+    volumes:
+      - ./logs:/logs
+    environment:
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://collector:4317
+      - OTEL_SERVICE_NAME=${OTEL_SERVICE_NAME:?required}
+    depends_on:
+      - collector
+
+  filebeat:
+    image: docker.elastic.co/beats/filebeat:8.7.1
+    volumes:
+      - ./filebeat.yml:/usr/share/${MODE:?apm, filebeat, filelogreceiver}/filebeat.yml
+      - ./logs/elastic.log:/logs/elastic.log
+    environment:
+        - ELASTIC_CLOUD_ID=${ELASTIC_CLOUD_ID:?required}
+        - ELASTIC_CLOUD_AUTH=${ELASTIC_CLOUD_AUTH:?required}
+
+  collector:
+    image: otel/opentelemetry-collector-contrib
+    volumes:
+      - ./collector/${MODE:?apm, filebeat, filelogreceiver}.yml:/collector.yml
+      - ./logs/otel.log:/logs/otel.log
+    command: ["--config=/collector.yml"]
+    environment:
+        - ELASTIC_APM_SERVER_ENDPOINT=${ELASTIC_APM_SERVER_ENDPOINT:?required}
+        - ELASTIC_APM_SERVER_SECRET=${ELASTIC_APM_SERVER_SECRET:?required}
+    ports:
+      - "4317:4317"
