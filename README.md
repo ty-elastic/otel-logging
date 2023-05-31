@@ -260,7 +260,7 @@ Further, you can leverage this same Elastic Agent instance (ideally running in y
 
 Alternatively, for customers who either wish to keep their nodes vendor-neutral or use a consolidated signal routing system, I recommend [Model 2](#model-2-logging-via-the-opentelemetry-collector), wherein an OpenTelemetry collector is used to scrape service log files. While workable and practiced by some early adopters in the field today, this model inherently carries some risk given the current beta nature of the OpenTelemetry filelogreceiver.
 
-I generally do not recommend [Model 1](#model-1-logging-via-opentelemetry-instrumentation) given its limited language support, experimental/alpha status (the API could change), and current potential for data loss. That said, in time, with more language support, and more thought to resilient designs, it has obviously advantages both with regard to simplicity and richness of metadata.
+I generally do not recommend [Model 1](#model-1-logging-via-opentelemetry-instrumentation) given its limited language support, experimental/alpha status, and current potential for data loss. That said, in time, with more language support, and more thought to resilient designs, it has obviously advantages both with regard to simplicity and richness of metadata.
 
 ## Extracting More Value From Your Logs
 
