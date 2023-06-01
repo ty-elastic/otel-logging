@@ -1,3 +1,7 @@
+**Interested in OpenTelemetry? Join me June 6 for a live webinar where we will discuss the state of the art with regard to OpenTelemetry, and how I think it will influence the future of Observability!** Register [here](https://events.elastic.co/opentelemetryelastic)
+
+---
+
 # Logging with OpenTelemetry + Elastic
 
 Arguably, OpenTelemetry exists to (greatly) increase usage of tracing and metrics amongst developers. That said, logging will continue to play a critical role in providing flexible, application-specific, event-driven data. Further, OpenTelemetry has the potential to bring added value to existing application logging flows:
